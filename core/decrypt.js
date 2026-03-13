@@ -1,0 +1,33 @@
+import crypto from "crypto";
+import { privateDecrypt, constants } from "crypto";
+
+import logger from "../utils/logger.js";
+
+let privateKeyBase64 = `LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2Z0lCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktnd2dnU2tBZ0VBQW9JQkFRQzFLdWpTV000Sk9XZDIKT1hkSHJ0cFFUb0VGYmZKS2JFWjlxYVpqYllld0wwZEVqMEpBZnJSRmlZd0d3Y1U3RGZPSGVxWnh4c3dRTHpZRQpaaWpqdjEwYmRMeVhTSzhPRWRYZkwwclc3M2J6RFNNRC9BcW5aTUpuSjJGWnJobDg5dWtiL3h0U3Fod1lPS0pXClJHbWRlTkZ5eVBQdElYZDFidHFBL2V5MjJrYmh4QzVvT0VHNzM2dVM0ckQya0JoYk5xeUVNOEMvMXl4cXdHTnEKc2I2b0JBbVV4Zm0rTE50SU5JSUtWbE1SL0tWejBBRk9sR0VoSzF2cWxmNWJTRDVOMENPUUlSN1loU3NGZHlObQptbzB3NUovWnl0MDlPUnloVFYrUk9QblcrRDV0WkZ0Y2xzWkhwcjVCZS9YT1ZnME5GUit4eDYrOGc2Q0FDcVNyCkllUmpNN3FoQWdNQkFBRUNnZ0VBQlM5TG5pem9LYiswR3dUR1NkYkFOaVJ2M3RTZlpxYTJWazZjTWtpSzViYWcKR1JZT3h6RGlQbkJjU3RKYTArNkwybDl4TjdnVEw5ZGpNTXVjUG9sNncvT3M0cGswRHdyaERuaUdLRGFPZjZKOQpuSHBMcWd1WUJVTGZyMXZIdnF2eHZEU3FaSU9zVzViUDZOUFdaTTIreXcyK3BWNkpyZlRVb3BsR1Z0dWJldGtiCi9mT1Y3SVV1NG5yTGI3YjV0UVZCSXcwMjRYK2szL3FFbmxMRWkrZU9JVnd3STMxd2RzWnVWelBoNjZtYytVN0oKcnd1bVRBT2JFQTZUeGxXbVEwdm03V1N0azNYUU5xczEyQkNrTU54aHZaNlErT0ZGMmJndDBSNWF3SjVCTFhOaApMU3RwVURVSUdraU5XdXNHTVBrQzByY3cvYnh5cHVMdFRnbW5lVDd2ZlFLQmdRRGNIUmtqYW5GWDBhNEFJbFF4ClhJU3hheXdkYS9uVDBKNGlaUHJJcXM0NjdCanVTVG13TmJKalJCbFpLS2lOK0J5TEN5YkRxSk02WDFnZDZiMVQKb2lKemRTanVmeE90dFRxWXhQOGlCRGN6cStiMzkrZ0hUN1VibE9lL1RmVm9HZFR6bXpQU2VlSnFGUzJwTm9Nbgo2UzY1QXNSYlpMQmFhY3lvOVExNDNrYUEzd0tCZ1FEU3RGRWNaSXR4TDNuMlJkWWVrU3oxT2RGaHl0QlVFa1ZaCkx2cmZvVE5zZEhRak94aVN3ZHNpMGxZRDcvdVQ1WDdDQUFPbW1ub2NveU5OcGlHdGtaWUdXT21nbjh6bnp3UzUKY3dsQ2MzQkFLNVloclBwZXJLRjVTelNrT1Blc09zeHkwSFQyUEJWSTNCaUlJd05hcmZhSTlmeWFlSUQraWdGdQp6RkJqRndPMGZ3S0JnQnd3V2N6UVQrMm9PN2xtckJPYVBxQWVFb3MrRGNPVG52eldvOHRaSElvdFBGQWY3cFJqCmZCSDhZYWFxYjFPbko3aWkxL2NNdXJZcUNiWGkvazBjb1g3WnpVRWw0eFpHOUZjbU8ycFcwZDc3TDl3bjBuNUYKTmZOdlVYS05nRlV4b2JVRTlsRUpMUGJhK1hzSE1TckdVU1orZFRrakh2YWxRQUdQU0lkbkorNVBBb0dCQUlIagpSbDBLWGl0WDZRYzM1ZGJTQjdUai8zOFpWM044RCtQNllneVpndW5Jb0E5WHpyNHBZcjBFaktIQXZvVmRZOWFUCnk2eFliZzVaUXRvTEg1ZXZ0NXdTRTNOQkR6K1hEb0tEdDZHUEtCTm15eFhYWEVBZ2l5b0tnbGo2QlRQV3kxRzcKejE0N2k2TnVpbkRocEoreHZkaVFTemV1TVZhNEhFb0JDVTBNVXV4aEFvR0JBSWozaTNZbmNIUVVCTVpyUEhUdQpxc2JScmY1THZUVFM1VEFSaVFHemxQMDUwNFVRUHF0bGh6T1d2TDIwSGpJVnplVElkWGNpR3ZDbGRuTnhOMHZTCnpFOG9VMWxZN0RyMW9MZGQ1YkhIaUh2VmJ6L1Jqa3orMm13b3RyUm5uQ2RQdEtNTkhHR2t5N1ZyeS91dWFqUXIKK3Y3a09FbUJnS2IrNm14YnRoNjhRWEhUCi0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K`;
+
+let privateKey = Buffer.from(privateKeyBase64, "base64").toString("utf-8");
+
+// Decrypt an env var
+export default function decryptSecret(encValue) {
+  try {
+    logger.info("decryptinng ....");
+
+    if (!encValue) {
+      throw new Error("No encrypted value provided for decryption");
+    }
+
+    const buffer = Buffer.from(encValue, "base64");
+    const decrypted = privateDecrypt(
+      {
+        key: privateKey,
+        padding: constants.RSA_PKCS1_OAEP_PADDING, // ✅ matches encrypt
+        oaepHash: "sha256",
+      },
+      buffer
+    );
+    return decrypted.toString("utf8");
+  } catch (error) {
+    logger.error("decryptSecret | error while decrypting ");
+    throw error;
+  }
+}
