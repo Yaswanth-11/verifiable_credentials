@@ -38,7 +38,7 @@ export const signDocument = async (
   inputDocument,
   mandatoryFields,
   signerKeys,
-  purpose
+  purpose,
 ) => {
   logger.info("signDocument | Core Document Sign/derive Started..");
 
@@ -118,7 +118,7 @@ export const signDocument = async (
 export const signPresentationDocument = async (
   inputDocument,
   nonce,
-  signerKeys
+  signerKeys,
 ) => {
   logger.info("Signing Verifiable Presentation document.");
 
@@ -154,7 +154,7 @@ export const signPresentationDocument = async (
 export const signRlcDocument = async (inputDocument, keyPair) => {
   try {
     logger.info(
-      "signRlcDocument | Signing the Revocation List Credential document."
+      "signRlcDocument | Signing the Revocation List Credential document.",
     );
 
     // create suite
@@ -171,7 +171,7 @@ export const signRlcDocument = async (inputDocument, keyPair) => {
     });
 
     logger.info(
-      "signRlcDocument | Revocation List Credential successfully signed."
+      "signRlcDocument | Revocation List Credential successfully signed.",
     );
     return signedCredential;
   } catch (error) {
@@ -193,7 +193,7 @@ export const signJWTDocument = async (
   keyPair,
   kid,
   iss,
-  mode
+  mode,
 ) => {
   try {
     logger.info("Signing the JWT Credential document.");
@@ -262,7 +262,7 @@ export const signJWTDocument = async (
 export const deriveJWTDocument = async (
   verifiableCredential,
   disclosure,
-  keyPair
+  keyPair,
 ) => {
   try {
     /*
@@ -361,15 +361,22 @@ export const verifyVerifiablePresentation = async (presentation) => {
     await setDIDtoRemoteDocuments(presentation);
     await setDIDtoRemoteDocuments(presentation.verifiableCredential[0]);
 
-    let dataChange = await fetch(
+    let response = await fetch(
       presentation.verifiableCredential[0].credentialStatus
-        .revocationListCredential
+        .revocationListCredential,
     );
-    const dataCredential = await dataChange.json();
 
-    logger.info(`Data change  ${JSON.stringify(dataCredential, null, 0)}`);
+    let text = await response.text(); // get raw string
 
-    await setDIDtoRemoteDocuments(dataCredential);
+    let dataChange = JSON.parse(text); // convert stringified JSON → object
+
+    if (typeof dataChange === "string") {
+      dataChange = JSON.parse(dataChange);
+    }
+
+    logger.info(`Data change ${JSON.stringify(dataChange, null, 2)}`);
+
+    await setDIDtoRemoteDocuments(dataChange);
 
     if (process.env.IssuerKeyAlgorithm == "BBS") {
       verifySuite = new DataIntegrityProof({
@@ -423,8 +430,8 @@ export const verifyVerifiablePresentation = async (presentation) => {
           }
           return value;
         },
-        2
-      )}`
+        2,
+      )}`,
     );
 
     if (result1.error) {
@@ -540,8 +547,8 @@ export const verifyverifiableCredential = async (credential) => {
           }
           return value;
         },
-        2
-      )}`
+        2,
+      )}`,
     );
 
     if (result1.error) {

@@ -153,8 +153,8 @@ export const generateVpHandler = async (
       throw new Error("No user found with the provided HolderSUID.");
     }
 
-    const holderseed = Result; //"12345678123456781234567812345678";
-    //const holderseed= "LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1FRUNBUUF3RXdZSEtvWkl6ajBDQVFZSUtvWkl6ajBEQVFjRUp6QWxBZ0VCQkNCSVRPS1F4TnRHSnN2UEdRWVIKSVpISU55T0JBSTN4VUhsYURSVWwreDdBbVE9PQotLS0tLUVORCBQUklWQVRFIEtFWS0tLS0tCg==";
+    const holderseed = Result; 
+
 
     const holderKeyPair = await createECKeyPair(holderseed);
 
@@ -171,8 +171,13 @@ export const generateVpHandler = async (
         DataNotFound: unknownClaims,
       };
     }
+    else{
+       return {
+        vpToken: signedVerifiablePresentation,
+        DataNotFound: "null",
+      };
+    }
 
-    return signedVerifiablePresentation;
   } catch (error) {
     logger.error(
       "generateVpHandler | Error during Verifiable Presentation generation."

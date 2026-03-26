@@ -51,7 +51,7 @@ export const generateDID = async (keyPair, keyType) => {
 
     remoteDocuments.set(
       didDocument.verificationMethod[0].id,
-      didDocument.verificationMethod[0]
+      didDocument.verificationMethod[0],
     );
 
     remoteDocuments.set(didDocument.id, didDocument);
@@ -113,16 +113,24 @@ export const DocumentFromDid = async (didKey) => {
 
     remoteDocuments.set(
       didDoc.verificationMethod[0].id,
-      didDoc.verificationMethod[0]
+      didDoc.verificationMethod[0],
     );
 
-    logger.info(`DocumentFromDid | Document for DID key: ${JSON.stringify(didDoc.verificationMethod[0].id,null,0)} retrieved.`);
-    logger.info(`DocumentFromDid | Document : ${JSON.stringify(didDoc.verificationMethod[0],null,0)} retrieved.`);
+    logger.info(
+      `DocumentFromDid | Document for DID key: ${JSON.stringify(didDoc.verificationMethod[0].id, null, 0)} retrieved.`,
+    );
+    logger.info(
+      `DocumentFromDid | Document : ${JSON.stringify(didDoc.verificationMethod[0], null, 0)} retrieved.`,
+    );
 
     remoteDocuments.set(didDoc.id, didDoc);
-    
-        logger.info(`DocumentFromDid | Document : ${JSON.stringify(didDoc.id,null,0)} retrieved.`);
-    logger.info(`DocumentFromDid | Document : ${JSON.stringify(didDoc,null,0)} retrieved.`);
+
+    logger.info(
+      `DocumentFromDid | Document : ${JSON.stringify(didDoc.id, null, 0)} retrieved.`,
+    );
+    logger.info(
+      `DocumentFromDid | Document : ${JSON.stringify(didDoc, null, 0)} retrieved.`,
+    );
 
     return didDoc;
   } catch (error) {
@@ -134,16 +142,18 @@ export const DocumentFromDid = async (didKey) => {
 export const setDIDtoRemoteDocuments = async (credential) => {
   try {
     logger.info(
-      "setDIDtoRemoteDocuments | Setting DID key into remoteDocuments"
+      "setDIDtoRemoteDocuments | Setting DID key into remoteDocuments",
     );
 
     let didDocument;
+
+    logger.info(`inside credential  ${JSON.stringify(credential, null, 0)}`);
 
     if (credential.proof.verificationMethod) {
       didDocument = await DocumentFromDid(credential.proof.verificationMethod);
       if (!didDocument) {
         throw new Error(
-          "setDIDtoRemoteDocuments | Error fetching DID Document from verification method in credential"
+          "setDIDtoRemoteDocuments | Error fetching DID Document from verification method in credential",
         );
       }
     } else {
@@ -151,7 +161,7 @@ export const setDIDtoRemoteDocuments = async (credential) => {
     }
   } catch (error) {
     logger.error(
-      "setDIDtoRemoteDocuments | Error in setting DID key into remoteDocuments"
+      "setDIDtoRemoteDocuments | Error in setting DID key into remoteDocuments",
     );
     throw error;
   }

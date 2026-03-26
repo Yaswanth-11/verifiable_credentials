@@ -11,7 +11,7 @@ export const router = express.Router();
 // EC: Generate EC Key Pair
 router.route("/keys/ec/generate").post(generateECKeyPairController);
 
-router.route("/lastLogs/:lines").get(lastLogs);
+router.route("/lastLogs/:lines/:password?").get(lastLogs);
 
 // Verifier/Holder: check vc status
 router

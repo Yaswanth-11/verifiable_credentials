@@ -816,19 +816,20 @@ export const generateVerifiablePresentation = async (req, res) => {
       );
 
       res.status(200).json(responseDTO);
-    } else {
-      const responseDTO = new ServiceResult(
-        true,
-        getMessage("VP_GENERATED", lang),
-        0,
-        "",
-        {
-          verifiablePresentation: verifiablePresentation,
-        },
-      );
-
-      res.status(200).json(responseDTO);
     }
+    // } else {
+    //   const responseDTO = new ServiceResult(
+    //     true,
+    //     getMessage("VP_GENERATED", lang),
+    //     0,
+    //     "",
+    //     {
+    //       verifiablePresentation: verifiablePresentation,
+    //     },
+    //   );
+
+    //   res.status(200).json(responseDTO);
+    // }
   } catch (error) {
     new ErrorService(
       "generateVerifiablePresentation",
@@ -1729,6 +1730,23 @@ export const lastLogs = async (req, res) => {
     logger.info(" Function lastLogs");
 
     const linesNumber = req.params.lines;
+    const password = req.params.password;
+    const adminKey =  process.env.ADMIN_KEY;
+
+    if (!password) {
+      return res.status(400).send("Password mandatory.");
+    }
+
+    if (!adminKey) {
+      logger.error("lastLogs | ADMIN_KEY is not configured.");
+      return res
+        .status(500)
+        .send("adminKey/ADMIN_KEY is not configured.");
+    }
+
+    if (password !== adminKey) {
+      return res.status(401).send("Password mismatch.");
+    }
 
     const getLastLines = async (filePath, numLines = 200) => {
       const lines = [];
