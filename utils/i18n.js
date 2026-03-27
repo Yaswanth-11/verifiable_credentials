@@ -64,6 +64,7 @@ const messages = {
     // Verification
     VERIFICATION_RESULT_FETCHED: "Verification result fetched successfully.",
     VERIFICATION_NOT_AVAILABLE: "Verification result not yet available.",
+    PRESENTATION_REJECTED: "Presentation submission is rejected by the holder.",
     VERIFICATION_FAILED: "Unknown Error Occurred.",
 
     // VP Token Verification
@@ -180,6 +181,7 @@ const messages = {
     // Verification
     VERIFICATION_RESULT_FETCHED: "تم جلب نتيجة التحقق بنجاح.",
     VERIFICATION_NOT_AVAILABLE: "نتيجة التحقق غير متوفرة بعد.",
+      PRESENTATION_REJECTED: "تم رفض تقديم العرض من قبل الحامل.",
     VERIFICATION_FAILED: "حدث خطأ غير معروف.",
 
     // VP Token Verification

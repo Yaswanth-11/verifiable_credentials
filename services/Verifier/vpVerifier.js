@@ -332,13 +332,13 @@ export const verifyVPDataHandler = async (verifiablePresentationData) => {
 
     const {verifiablePresentation, DataNotFound} = verifiablePresentationData;
 
-    logger.info(
-      `Parsed verifiable presentation data: ${JSON.stringify(
-        verifiablePresentation,
-        null,
-        2
-      )}`
-    );
+    // logger.info(
+    //   `Parsed verifiable presentation data: ${JSON.stringify(
+    //     verifiablePresentation,
+    //     null,
+    //     2
+    //   )}`
+    // );
 
     logger.info(`DataNotFound: ${JSON.stringify(DataNotFound, null, 2)}`);
     

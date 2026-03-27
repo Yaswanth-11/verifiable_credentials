@@ -816,6 +816,8 @@ export const generateVerifiablePresentation = async (req, res) => {
       );
 
       res.status(200).json(responseDTO);
+    }else{
+      throw new Error("Failed to generate Verifiable Presentation due to missing fields in the response.");
     }
     // } else {
     //   const responseDTO = new ServiceResult(
@@ -1346,6 +1348,19 @@ export const verifypresentationResponseVpTokenController = async (req, res) => {
     }
 
     const { verifyResult } = verificationResult;
+
+    if(verifyResult === "Presentation submission is rejected by the holder."){
+      logger.info(`Presentation submission is rejected by the holder for transaction ID ${transactionId}.`);
+
+      const errorResponseDTO = new ServiceResult(
+        false,
+        getMessage("PRESENTATION_REJECTED", lang),
+        0,
+        verifyResult,
+        null,
+      );
+      res.status(200).json(errorResponseDTO);
+    }
 
     if (verifyResult === "Data not yet posted") {
       logger.info(`Data for transaction ID ${transactionId} not yet posted.`);
