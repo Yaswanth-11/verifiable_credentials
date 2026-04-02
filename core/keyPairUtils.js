@@ -6,16 +6,11 @@ import * as base58btc from "base58-universal";
 
 import crypto from "crypto";
 
-import EC from "eckles";
-import jose from "node-jose";
 import JWK from "./JWK.js";
 
 import { generateDID } from "./DID.js";
 import logger from "../utils/logger.js";
 
-//import { pkcs8ToJwk } from "./pem2jwk.js";
-
-import pkcs2Jwk from "./pem2jwk.js";
 
 /**
  * Utility to create an Ed25519 key pair for the Holder.
@@ -154,61 +149,6 @@ export const convertPEMToECKeyPair = async (pemString, isOpenssl) => {
       d: data.d,
     };
 
-    if (0) {
-      if (isOpenssl) {
-        const jwk = await EC.toJwk({ pem: pemString });
-
-        logger.info(
-          `convertPEMToECKeyPair | x and y values of jwk ${jwk.x} ${jwk.y}`
-        );
-
-        ecJWK = {
-          key_ops: ["sign"],
-          ext: true,
-          kty: "EC",
-          x: jwk.x,
-          y: jwk.y,
-          crv: "P-256",
-          d: jwk.d,
-        };
-      } else {
-        pkcs2Jwk.pkcs8ToJwk(pemString, (err, jwk) => {
-          if (err) {
-            throw err;
-          }
-          data = jwk;
-        });
-
-        ecJWK = {
-          key_ops: ["sign"],
-          ext: true,
-          kty: data.kty,
-          x: data.x,
-          y: data.y,
-          crv: data.crv,
-          d: data.d,
-        };
-      }
-    }
-
-    if (false && "unwanted_code") {
-      const privateKey = await jose.importPKCS8(pemString, "ES256");
-      console.log(privateKey);
-      pkcs2Jwk.ssleayToJwk(pemString, (err, jwk) => {
-        if (err) {
-          throw err;
-        }
-        data = jwk;
-      });
-      jose.JWK.asKey(pemString, "pem").then(function (result) {
-        let res = result.toJSON(true);
-        let output = JSON.stringify(res, null, 2);
-        console.log(output);
-      });
-      const joseData = await jose.JWK.asKey(pemString, "pem");
-      const data = joseData.toJSON(true);
-      console.dir(data);
-    }
 
     const ecKeyPair = await convertJWKToECKeyPair(ecJWK);
     logger.info(

@@ -329,12 +329,7 @@ export const verifyPresentationResponseVpToken = async (transactionId) => {
       let attributesList = "";
       let vpToken = "";
 
-      if(presentationResponse.isRejected) {
-
-        logger.info(`Presentation submission rejected for transaction ID: ${transactionId}`);
-        verifyResult = "Presentation submission is rejected by the holder.";
-      }
-      else if (
+      if (
         !presentationResponse.presentation_submission &&
         presentationResponse.response_type === "vp_token" &&
         presentationResponse.response_mode === "direct_post"

@@ -3,13 +3,9 @@ import { createECKeyPair, createEDKeyPair } from "../../core/keyPairUtils.js";
 import {
   prepareDerivedCredentialData,
   prepareverifablePresentationData,
-  prepareJwtVerifablePresentationData,
-  prepareDisclosureCredential,
 } from "../../core/credentialPreparation.js";
 import {
-  deriveJWTDocument,
   signDocument,
-  signJWTDocument,
   verifyverifiableCredential,
 } from "../../core/documentSigning.js";
 import {
@@ -23,10 +19,6 @@ import { createRequest } from "../../core/httpClient.js";
 import { v1 as uuidv1, v4 as uuidv4 } from "uuid";
 
 import { redisObj } from "../initialServices.js";
-import { getJwkFromMultiKey } from "../../core/keyPairUtils.js";
-
-import { convertToYamlFormat } from "../../core/credentialPreparation.js";
-import { generateECKeyPairHandler } from "../Issuer/vcGenerator.js";
 
 /**
  * Service to handle Holder key pair generation.
@@ -186,102 +178,6 @@ export const generateVpHandler = async (
   }
 };
 
-/**
- * Service to handle the generation of Verifiable Presentation.
- *
- * @param {string} VerifiableCredential - The Verifiable Credential to derive the VP from.
- * @param {Array<string>} SelectedClaims - The list of claims selected for inclusion in the VP.
- * @param {string} nonce - A nonce used for unique transactions.
- * @param {string} HolderSeed - A seed value to sign the presentation.
- * @returns {Promise<Object>} - The generated Verifiable Presentation.
- */
-export const generateJwtVpHandler = async (
-  VerifiableCredential,
-  SelectedClaims,
-  nonce,
-  HolderSUID
-) => {
-  try {
-    logger.info(
-      "generateJwtVpHandler | Starting generation of Verifiable Presentation process."
-    );
-
-    // Validate incoming parameters
-    if (!VerifiableCredential) {
-      throw new Error("VerifiableCredential is missing.");
-    }
-    if (!SelectedClaims) {
-      throw new Error("SelectedClaims are missing.");
-    }
-    if (!nonce) {
-      throw new Error("Nonce is missing.");
-    }
-    if (!HolderSUID) {
-      throw new Error("HolderSUID is missing.");
-    }
-
-    /*
-
-    const holderKeyPair = await generateHolderKeyPairHandler(HolderSUID);
-
-    const holderJWK = await getJwkFromMultiKey(holderKeyPair.keyPair, "ED");
-
-    */
-
-    let url = process.env.HOLDERSEEDURL;
-    let endpoint = `/MDOCProvisioning/getUserKey/${HolderSUID}`;
-
-    if (!url) {
-      logger.info("HOLDERSEEDURL doesn't set in environment variables");
-      throw new Error("error in getting url from environment variables");
-    }
-
-    const Result = await createRequest(`${url}${endpoint}`, "", "GET");
-
-    const holderseed = Result; //"12345678123456781234567812345678";
-
-    const holderKeyPair = await createECKeyPair(holderseed);
-
-    const holderJWK = await getJwkFromMultiKey(holderKeyPair.keyPair, "EC");
-
-    const disclosure = await prepareDisclosureCredential(
-      VerifiableCredential,
-      SelectedClaims
-    );
-
-    const derivedVerifiableCredential = await deriveJWTDocument(
-      VerifiableCredential,
-      disclosure,
-      holderJWK
-    );
-
-    if (!derivedVerifiableCredential) {
-      throw new Error("Failed to derive the Verifiable Credential.");
-    }
-
-    const presentationData = await prepareJwtVerifablePresentationData(
-      derivedVerifiableCredential,
-      holderKeyPair.did
-    );
-
-    const claimset = await convertToYamlFormat(presentationData, "derivation");
-
-    const signedVerifiablePresentation = await signJWTDocument(
-      claimset,
-      holderJWK,
-      holderKeyPair.didDocument.verificationMethod[0].id,
-      holderKeyPair.didDocument.id,
-      "derive"
-    );
-
-    return signedVerifiablePresentation;
-  } catch (error) {
-    logger.error(
-      "generateJwtVpHandler | Error during Verifiable Presentation generation."
-    );
-    throw error;
-  }
-};
 
 /**
  * Service to handle Presentation Submission generation.

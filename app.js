@@ -1,4 +1,5 @@
 import express from "express";
+import helmet from 'helmet';
 import cors from "cors";
 import bodyParser from "body-parser";
 import { router as vcRouter } from "./routes/index.js";
@@ -9,6 +10,12 @@ import logger from "./utils/logger.js";
 const app = express();
 
 // Middleware setup
+
+app.use(
+  helmet({
+    contentSecurityPolicy: false
+  })
+);
 
 app.use(bodyParser.json({ limit: "10mb" }));
 app.use(bodyParser.urlencoded({ limit: "10mb", extended: true }));

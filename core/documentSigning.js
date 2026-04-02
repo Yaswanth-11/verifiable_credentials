@@ -16,7 +16,6 @@ import { cryptosuite as eddsaRdfc2022CryptoSuite } from "@digitalbazaar/eddsa-rd
 
 import { DataIntegrityProof } from "@digitalbazaar/data-integrity";
 
-import sd from "../SD-JWT/transmute sd-jwt/index.js";
 
 import * as rlc from "@digitalbazaar/vc-revocation-list";
 
@@ -33,6 +32,7 @@ import { DocumentFromDid, setDIDtoRemoteDocuments } from "./DID.js";
 import { getJwkfromDidMultibase } from "./keyPairUtils.js";
 
 import { calculateJwkThumbprint } from "jose";
+import { buildValidatedUrl } from "../utils/urlValidator.js";
 
 export const signDocument = async (
   inputDocument,
@@ -180,140 +180,6 @@ export const signRlcDocument = async (inputDocument, keyPair) => {
   }
 };
 
-/**
- * Signs the JWT Credential using issuer's key pair.
- *
- * @param {Object} inputDocument - The prepared Credential document.
- * @param {Object} keyPair - Issuer's key pair for signing the document.
- * @returns {Promise<Object>} Signed JWT Credential.
- */
-
-export const signJWTDocument = async (
-  inputDocument,
-  keyPair,
-  kid,
-  iss,
-  mode,
-) => {
-  try {
-    logger.info("Signing the JWT Credential document.");
-
-    let typ;
-    let cty;
-    let alg;
-
-    if (mode == "issue") {
-      alg = "ES256";
-      typ = "application/vc+sd-jwt";
-      cty = "application/vc";
-    } else if (mode == "derive") {
-      alg = "ES256";
-      typ = "application/vp+sd-jwt";
-      cty = "application/vp";
-    }
-
-    logger.info(`signJWTDocument | Signing mode: ${mode}`);
-    logger.info(`signJWTDocument | Signing algorithm crv: ${keyPair.crv}`);
-    logger.info(`signJWTDocument | Signing algorithm alg: ${alg}`);
-
-    const publicKeyJwk = {};
-    publicKeyJwk.x = keyPair.x;
-    publicKeyJwk.y = keyPair.y;
-    publicKeyJwk.kty = keyPair.kty;
-    publicKeyJwk.crv = keyPair.crv;
-
-    const secretKeyJwk = {};
-    secretKeyJwk.x = keyPair.x;
-    secretKeyJwk.y = keyPair.y;
-    secretKeyJwk.d = keyPair.d;
-    secretKeyJwk.kty = keyPair.kty;
-    secretKeyJwk.crv = keyPair.crv;
-    secretKeyJwk.alg = alg;
-
-    //TODO add iss, iat, exp to the credential
-    //holder public jwk
-
-    const iat = Math.floor(Date.now() / 1000); // current timestamp in seconds
-    const exp = iat + 365 * 24 * 60 * 60; // 1 year from now
-
-    const signedCredential = await sd
-      .issuer({
-        alg,
-        kid: kid,
-        typ,
-        iss,
-        cty,
-        secretKeyJwk: secretKeyJwk,
-      })
-      .issue({
-        claimset: inputDocument,
-        iat,
-        exp,
-      });
-
-    logger.info("JWT Credential successfully signed.");
-    return signedCredential;
-  } catch (error) {
-    logger.error("Error in occured during credential signing");
-    throw error;
-  }
-};
-
-export const deriveJWTDocument = async (
-  verifiableCredential,
-  disclosure,
-  keyPair,
-) => {
-  try {
-    /*
-    const publicKeyJwk = {};
-    publicKeyJwk.x = keyPair.x;
-    publicKeyJwk.kty = keyPair.kty;
-    publicKeyJwk.crv = keyPair.crv;
-    publicKeyJwk.alg = "EdDSA";
-    publicKeyJwk.kid = await calculateJwkThumbprint(publicKeyJwk);
-
-    const secretKeyJwk = {};
-    secretKeyJwk.x = keyPair.x;
-    secretKeyJwk.d = keyPair.d;
-    secretKeyJwk.kty = keyPair.kty;
-    secretKeyJwk.crv = "Ed25519";
-    secretKeyJwk.alg = "EdDSA";
-    secretKeyJwk.kid = await calculateJwkThumbprint(secretKeyJwk);
-
-    */
-
-    logger.info(`deriveJWTDocument | KeyPair crv: ${keyPair.crv}`);
-
-    logger.info(`deriveJWTDocument | KeyPair kty: ${keyPair.kty}`);
-
-    const publicKeyJwk = {};
-    publicKeyJwk.x = keyPair.x;
-    publicKeyJwk.y = keyPair.y;
-    publicKeyJwk.kty = keyPair.kty;
-    publicKeyJwk.crv = keyPair.crv;
-    publicKeyJwk.alg = "ES256";
-
-    const secretKeyJwk = {};
-    secretKeyJwk.x = keyPair.x;
-    secretKeyJwk.y = keyPair.y;
-    secretKeyJwk.d = keyPair.d;
-    secretKeyJwk.kty = keyPair.kty;
-    secretKeyJwk.crv = keyPair.crv;
-    secretKeyJwk.alg = "ES256";
-
-    const vp = await sd.holder({ alg: "ES256", secretKeyJwk }).issue({
-      token: verifiableCredential,
-      disclosure,
-    });
-    logger.info("JWT Credential successfully derived.");
-
-    return vp;
-  } catch (error) {
-    logger.error("Error occured during jwt credential deriving");
-    throw error;
-  }
-};
 
 /**
  * Verifies the Revocation List Credential's proof.
@@ -362,8 +228,8 @@ export const verifyVerifiablePresentation = async (presentation) => {
     await setDIDtoRemoteDocuments(presentation.verifiableCredential[0]);
 
     let response = await fetch(
-      presentation.verifiableCredential[0].credentialStatus
-        .revocationListCredential,
+      buildValidatedUrl(presentation.verifiableCredential[0].credentialStatus
+        .revocationListCredential)
     );
 
     let text = await response.text(); // get raw string
@@ -449,51 +315,7 @@ export const verifyVerifiablePresentation = async (presentation) => {
   }
 };
 
-export const verifyJwtVerifiablePresentationCore = async (presentation) => {
-  logger.info("verifiable presentation verification started...");
-  try {
-    // Sample resolver object
-    const resolver = {
-      /**
-       * Resolves the public key for the given key ID (kid).
-       * @param {string} kid - The Key ID (public key DID).
-       * @returns {Promise<Object>} - Resolves to the public key in JWK format.
-       */
-      resolve: async (kid) => {
-        try {
-          const publicKeyJwk = await getJwkfromDidMultibase(kid);
 
-          return publicKeyJwk;
-        } catch (error) {
-          console.error("Error resolv ing public key:", error);
-          throw error;
-        }
-      },
-    };
-    const presentationResult = await sd.verifier({ resolver }).verify({
-      token: presentation,
-    });
-    let credentialResult = [];
-    if (presentationResult) {
-      presentationResult.claimset.verifiableCredential.map(async (vc) => {
-        vc = vc?.id.split(",")[1];
-        let vc1 =
-          "eyJhbGciOiJFUzI1NiIsImtpZCI6ImRpZDprZXk6ekRuYWV1VlVBN1hkeENudFdLUThQeWtlVFpqYWFFQXlxYUFVTEFhb3dObjRpNGhkdSN6RG5hZXVWVUE3WGR4Q250V0tROFB5a2VUWmphYUVBeXFhQVVMQWFvd05uNGk0aGR1IiwidHlwIjoiYXBwbGljYXRpb24vdmMrc2Qtand0IiwiY3R5IjoiYXBwbGljYXRpb24vdmMifQ.eyJfc2RfYWxnIjoic2hhLTI1NiIsIkBjb250ZXh0IjpbImh0dHBzOi8vd3d3LnczLm9yZy8yMDE4L2NyZWRlbnRpYWxzL3YxIiwiaHR0cHM6Ly93M2lkLm9yZy92Yy1yZXZvY2F0aW9uLWxpc3QtMjAyMC92MSIsImh0dHA6Ly9sb2NhbGhvc3Q6MzA1MC9hcGkvdmMvc2FtcGxlRG9jRmV0Y2giXSwi…akhvSGxZT0JEZWQwdVlCcmNaZyIsImplMU8tb3Z3MUxsM0JRZEJ2NVJ3dWdjcGt4eTZEbzRLb3Jrd1k5U2ZjaXciLCJvektwNmJHTzZ3a05mWnZGS3hyNDRRTy1KMVdaMFN2UktyMXhBWU9nUWI4IiwiclllUVJ6UktzYnhNWWdydmhVc1hUVzh0V2lIZHlCWkxOV1lrUVFzNnI3RSIsInZnRXBaTEVURFdTWnFvYlNQNFZPYWxnbThOODRDM1dfMHVuRDhhZG1QWWciXX19fQ.3fBqv6tnUAujWPZdr0R8iekMcTbCtZKUOSb92Lg2DRzl-Q9S43VZUr2v5_-2pAR1Q9MueY1HP19WyvoahX2SzA~WyJfQzZLMmdvMTdUemVyRldLdC1sTXpnIiwgInBob3RvIiwgInBob3RvVmFsdWUiXQ~WyJhOG56Y1ZvOG5kaUU1bjM4YVBQYXdRIiwgImVtYWlsIiwgImVtYWlsLmNvbSJd~";
-        _result = await sd.verifier({ resolver }).verify({
-          token: vc1,
-        });
-        credentialResult.push(_result);
-      });
-    }
-    return [].concat(presentationResult, ...credentialResult);
-  } catch (error) {
-    logger.error("Error in verifying verifiable presentation.", {
-      error: error.message,
-      stack: error.stack,
-    });
-    throw error;
-  }
-};
 
 export const verifyverifiableCredential = async (credential) => {
   logger.info("verifiable credential verification started...");

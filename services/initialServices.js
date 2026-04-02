@@ -1,23 +1,18 @@
 import { remoteDocumentInit } from "../core/documentLoader.js";
 import logger from "../utils/logger.js";
-import { contractInitialize } from "../core/blockchainCore.js";
+
 import { nodeRedisDemo } from "../core/redis.js";
 
-// Initialize Redis and Blockchain contract
+// Initialize Redis 
 let redisObj;
-let contractObj;
+
 let remoteDocuments;
 
 const initServices = async () => {
   try {
     // Initialize Redis
     logger.info("Initializing Redis...");
-    redisObj = await nodeRedisDemo(); //"hello";
-
-    // Initialize Blockchain Contract
-    logger.info("Initializing Blockchain Contract...");
-    contractObj = "";
-    //contractInitialize();
+    redisObj = await nodeRedisDemo(); 
 
     // Initialize Remote Documents
     logger.info("Loading remote documents...");
@@ -32,5 +27,5 @@ const initServices = async () => {
   }
 };
 
-export { redisObj, contractObj, remoteDocuments };
+export { redisObj, remoteDocuments };
 export default initServices;

@@ -2,6 +2,7 @@ import axios from "axios";
 import { ResponseDTO } from "../dto/responseDto.js";
 
 import logger from "../utils/logger.js";
+import { buildValidatedUrl } from "../utils/urlValidator.js";
 
 // import https from "https";
 
@@ -10,8 +11,8 @@ import logger from "../utils/logger.js";
 export const postData = async (url, requestDto) => {
   let response;
   try {
-    // Make HTTP POST request
-    const responseFromService = await axios.post(url, requestDto);
+
+    const responseFromService = await axios.post(buildValidatedUrl(url), requestDto);
 
     // Deserialize JSON response into ResponseDTO object
     const responseData = responseFromService.data;
@@ -32,7 +33,9 @@ export const postData = async (url, requestDto) => {
 export const getData = async (url) => {
   try {
     let responseFromService;
-    responseFromService = await axios.get(url);
+
+    
+    responseFromService = await axios.get(buildValidatedUrl(url));
 
     return responseFromService;
   } catch (error) {
@@ -55,7 +58,8 @@ export async function createRequest(uri, requestBody, method) {
     options.body = JSON.stringify(requestBody);
   }
   try {
-    const response = await fetch(uri, options);
+
+    const response = await fetch(buildValidatedUrl(uri), options);
 
     if (!response.ok) {
       logger.info(`HTTP error! Status: ${response.status}`);

@@ -5,6 +5,7 @@ import { verifyRlcDocument } from "./documentSigning.js";
 import * as rlc from "@digitalbazaar/vc-revocation-list";
 
 import logger from "../utils/logger.js";
+import { buildValidatedUrl } from "../utils/urlValidator.js";
 
 /**
  * Generates the base Revocation List Credential data.
@@ -226,8 +227,12 @@ export const credentialStatus = async (verifiableCredential) => {
     );
     logger.info(`Revocation list index: ${revocationListIndex}`);
 
+
+    
+    const safeUrl = buildValidatedUrl(revocationListCredential);
+
     // Fetch the revocation list credential (RLC) data
-    const res = await fetch(revocationListCredential);
+    const res = await fetch(safeUrl);
     const data = await res.json();
 
     if (!data) {
@@ -298,8 +303,8 @@ export const credentialRlcStatus = async (
     );
     logger.info(`Revocation list index: ${revocationListIndex}`);
 
-    // Fetch the revocation list credential (RLC) data
-    const res = await fetch(revocationListCredential);
+    const res = await fetch(buildValidatedUrl(revocationListCredential));
+
     const data = await res.json();
 
     if (!data) {

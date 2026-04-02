@@ -6,11 +6,8 @@ import {
   fetchRequestObjectController,
   parsePresentationDefinition,
   submitVpTokenController,
-  submitVpTokenControllerV2,
   verifyVerifiableCredential
 } from "../controllers/verifiableCredential_latest.js";
-
-import { generateJWTVerifiablePresentation } from "../controllers/JwtVerifiableCredential.js";
 
 export const router = express.Router();
 
@@ -40,10 +37,6 @@ router
   .route("/presentation/definition/claims")
   .post(parsePresentationDefinition);
 
-// Holder: Issue JWT Verifiable Presentation (VP)
-router
-  .route("/credentials/presentation/jwt/issue")
-  .post(generateJWTVerifiablePresentation);
 
 //Holder: verify verifiable Credential 
 

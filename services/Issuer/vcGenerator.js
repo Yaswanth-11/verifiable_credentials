@@ -10,14 +10,11 @@ import { deleteSchemaFromRemoteDocuments } from "../../core/documentLoader.js";
 import {
   signDocument,
   signRlcDocument,
-  signJWTDocument,
 } from "../../core/documentSigning.js";
 import { generateRlc, updateRlc } from "../../core/manageRLC.js";
 import { generateCredentialSchema } from "../../core/schemaCreation.js";
 
-import { convertToYamlFormat } from "../../core/credentialPreparation.js";
 
-import { getJwkFromMultiKey } from "../../core/keyPairUtils.js";
 /**
  * Service to handle EC key pair generation.
  *
@@ -260,90 +257,6 @@ export const issueCredentialCompleteHandler = async (
   }
 };
 
-/**
- * Service to handle the issuance of Verifiable Credentials.
- *
- * @param {string} HolderDID - The DID of the credential holder.
- * @param {Object} Data - Holder-specific data for the credential.
- * @param {string} IssuerSeed - Seed of the issuer used for signing.
- * @param {string} RlcUrl - URL for the revocation list credential.
- * @param {string} counter - Unique index for the revocation list.
- * @param {Object} MetaData - Metadata including name, description, and expiration details.
- * @returns {Promise<Object>} - The generated Verifiable Credential.
- * @throws {Error} - Throws an error if credential issuance fails.
- */
-export const issueJWTCredentialHandler = async (
-  HolderDID,
-  Data,
-  IssuerSeed,
-  RlcUrl,
-  counter,
-  MetaData,
-  ProfileType
-) => {
-  try {
-    if (!MetaData) {
-      throw new Error("MetaData is missing");
-    }
-    if (!RlcUrl) {
-      throw new Error("RlcUrl is missing");
-    }
-    if (!counter) {
-      throw new Error("counter is missing");
-    }
-    if (!Data) {
-      throw new Error("Data is missing");
-    }
-    if (!HolderDID) {
-      throw new Error("HolderDID is needed for credential preparation");
-    }
-    if (!IssuerSeed) {
-      throw new Error("IssuerSeed is missing");
-    }
-    if (!ProfileType) {
-      throw new Error("ProfileType is missing");
-    }
-
-    logger.info(
-      "issueJWTCredentialHandler | Starting Verifiable Credential issuance process."
-    );
-
-    const issuerKeyPair = await generateECKeyPairHandler(IssuerSeed);
-
-    const issuerJWK = await getJwkFromMultiKey(issuerKeyPair.keyPair, "EC");
-
-    const credentialData = await prepareCredential(
-      MetaData,
-      Data,
-      RlcUrl,
-      counter,
-      HolderDID,
-      issuerKeyPair,
-      ProfileType
-    );
-
-    const claimset = await convertToYamlFormat(credentialData, "issuance");
-
-    const verifiableCredential = await signJWTDocument(
-      claimset,
-      issuerJWK,
-      issuerKeyPair.didDocument.verificationMethod[0].id,
-      issuerKeyPair.didDocument.id,
-      "issue"
-    );
-
-    logger.info(
-      "issueJWTCredentialHandler | Verifiable Credential issuance completed successfully."
-    );
-
-    return verifiableCredential;
-  } catch (error) {
-    logger.error(
-      "issueJWTCredentialHandler | Error during Verifiable Credential issuance."
-    );
-    throw error;
-  }
-};
 
 /**
  * Service to handle Revocation List Credential (RLC) creation.

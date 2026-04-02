@@ -9,8 +9,6 @@ import {
   parseVpTokenResult
 } from "../controllers/verifiableCredential_latest.js";
 
-import { verifyJwtVerifiablePresentation } from "../controllers/JwtVerifiableCredential.js";
-
 export const router = express.Router();
 
 // Verifier: Generate Verifier Key Pair
@@ -39,19 +37,4 @@ router.route("/presentation/verify/result").post(parseVpToken);
 // Verifier : parse vp_token and return attributes and verification result
 router.route("/presentation/verify/result/vpToken").post(parseVpTokenResult);
 
-// Verifier: Get verification result of jwt verifiable presentation
-router
-  .route("/presentation/jwt/verify/result")
-  .post(verifyJwtVerifiablePresentation);
 
-/*
-
-// Verifier: Parse Presentation Request in JWT format
-router
-  .route("/verifier/presentation/request/parse")
-  .post(parsePresentationRequest);
-
-// Verifier: Verify Mattr Generated Credential
-router.route("/verifier/credentials/mattr").post(mattrCredential);
-
-*/

@@ -11,10 +11,9 @@ import { getDecodedRlc, credentialStatus,credentialRlcStatus } from "../../core/
 
 import { v1 as uuidv1, v4 as uuidv4 } from "uuid";
 import {
-  verifyJwtVerifiablePresentationCore,
   verifyVerifiablePresentation,
 } from "../../core/documentSigning.js";
-import { N } from "ethers";
+
 
 /**
  * Service to handle Verifier EC key pair generation.
@@ -268,39 +267,6 @@ export const credentialRlcStatusHandler = async (rlcUrl, counter) => {
   }
 };
 
-/**
- * Service to handle generating the verification result of verifiable presenatation.
- *
- * @param {Object|string} jwt verifiable presentation - The verifiable presentation ( in JSON web token format).
- * @returns {Promise<string>} - Verification result of jwt verifiable presentation ("true" or "false").
- */
-export const verifyJWTCredentialHandler = async (JwtVerifiablePresentation) => {
-  try {
-    logger.info(
-      "verifyJWTCredentialHandler | Starting the credential verification process."
-    );
-
-    if (!JwtVerifiablePresentation) {
-      throw new Error("JwtVerifiablePresentation parameter is missing");
-    }
-
-    // Get the credential result by calling the core function
-    const result = await verifyJwtVerifiablePresentationCore(
-      JwtVerifiablePresentation
-    );
-
-    logger.info(
-      "verifyJWTCredentialHandler | Successfully retrieved the verification result of verifiable presentation"
-    );
-
-    return result;
-  } catch (error) {
-    logger.error(
-      "verifyJWTCredentialHandler | Error occurred during credential verification process."
-    );
-    throw error;
-  }
-};
 
 /**
  * Service to verify the data of a verifiable presentation.

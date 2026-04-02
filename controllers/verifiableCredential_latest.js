@@ -8,7 +8,6 @@ import { getMessage } from "../utils/i18n.js";
 import {
   generateHolderKeyPairHandler,
   generateVpHandler,
-  generateJwtVpHandler,
   generatePsHandler,
   fetchRequestObjectHandler,
   parsePdHandler,
@@ -35,11 +34,8 @@ import {
   verifyVPDataHandler,
 } from "../services/Verifier/vpVerifier.js";
 
-import {
-  addLogsHandler,
-  fetchLogsHandler,
-  getTxnDetailsHandler,
-} from "../services/BlockchainServices.js";
+import crypto from "crypto";
+
 
 /**
  * Controller to handle Holder Ed25519 key pair generation.
@@ -1406,174 +1402,6 @@ export const verifypresentationResponseVpTokenController = async (req, res) => {
   }
 };
 
-/**
- * Controller to add logs into the blockchain.
- * Processes incoming requests, validates the data, and calls the handler to add logs.
- *
- * @param {Object} req - Express request object containing `Identifier` and `Transaction` in the body.
- * @param {Object} res - Express response object to send the result or error back to the client.
- * @returns {Promise<void>} - Sends a response with the transaction result or an error message.
- */
-export const addLogsController = async (req, res) => {
-  const lang = req.lang;
-  try {
-    // Validate request body
-    if (!req.body) {
-      logger.error("Received an invalid request, missing body.");
-      throw new Error("Invalid request body.");
-    }
-
-    const { Identifier, Transaction } = req.body;
-
-    const addedBlockResponse = await addLogsHandler(Identifier, Transaction);
-
-    if (!addedBlockResponse) {
-      logger.error("Failed to add logs: No response from blockchain.");
-      throw new Error("Failed to add logs to the blockchain.");
-    }
-
-    logger.info("Successfully added logs to the blockchain.", { Identifier });
-
-    const responseDTO = new ServiceResult(
-      true,
-      getMessage("LOG_ADDED", lang),
-      0,
-      "",
-      addedBlockResponse,
-    );
-    res.status(200).json(responseDTO);
-  } catch (error) {
-    logger.error(`Error adding logs into blockchain: ${error.message}`, {
-      stack: error.stack,
-    });
-    const errorResponseDTO = new ServiceResult(
-      false,
-      getMessage("LOG_ADD_FAILED", lang),
-      0,
-      error.message,
-      null,
-    );
-    res.status(200).json(errorResponseDTO);
-  }
-};
-
-/**
- * Controller to fetch logs from the blockchain.
- * Validates the request, passes data to the service layer, and returns the fetched logs.
- *
- * @param {Object} req - Express request object, expects `Identifier` in the body.
- * @param {Object} res - Express response object to send the logs or error.
- * @returns {Promise<void>} - Sends the blockchain logs or error message.
- */
-export const fetchLogsController = async (req, res) => {
-  const lang = req.lang;
-  try {
-    // Validate request body
-    if (!req.body) {
-      logger.error("Received an invalid request, missing body.");
-      throw new Error("Invalid request body.");
-    }
-
-    const { Identifier } = req.body;
-
-    const fetchedLogs = await fetchLogsHandler(Identifier);
-
-    if (!fetchedLogs) {
-      logger.error("No logs fetched for the provided Identifier.", {
-        Identifier,
-      });
-      throw new Error("Failed to fetch logs for the given Identifier.");
-    }
-
-    logger.info("Successfully fetched logs from the blockchain.", {
-      Identifier,
-    });
-
-    const responseDTO = new ServiceResult(
-      true,
-      getMessage("LOGS_FETCHED", lang),
-      0,
-      "",
-      fetchedLogs,
-    );
-    res.status(200).json(responseDTO);
-  } catch (error) {
-    logger.error(`Error in fetchLogsController: ${error.message}`, {
-      stack: error.stack,
-    });
-
-    const errorResponseDTO = new ServiceResult(
-      false,
-      getMessage("LOGS_FETCH_FAILED", lang),
-      0,
-      error.message,
-      null,
-    );
-    res.status(200).json(errorResponseDTO);
-  }
-};
-
-/**
- * Controller to fetch transaction details from blockchain by block hash ID.
- * Validates the request, delegates to the service layer, and returns the transaction details.
- *
- * @param {Object} req - Express request object, expects `TransactionHash` in the body.
- * @param {Object} res - Express response object to send the transaction details or an error.
- * @returns {Promise<void>} - Sends the transaction details or an error message.
- */
-export const getTransactionDetails = async (req, res) => {
-  const lang = req.lang;
-  try {
-    // Validate request body
-    if (!req.body) {
-      logger.error("Received an invalid request, missing body.");
-      throw new Error("Invalid request body.");
-    }
-
-    const { TransactionHash } = req.body;
-
-    // Fetch transaction details using the service
-    const transactionDetails = await getTxnDetailsHandler(TransactionHash);
-
-    if (!transactionDetails) {
-      logger.error("No transaction details found for the given hash ID.", {
-        TransactionHash,
-      });
-      throw new Error(
-        "Failed to fetch transaction details for the given hash ID.",
-      );
-    }
-
-    logger.info(
-      "Successfully fetched transaction details from the blockchain.",
-      {
-        TransactionHash,
-      },
-    );
-
-    const responseDTO = new ServiceResult(
-      true,
-      getMessage("TXN_FETCHED", lang),
-      0,
-      "",
-      fetchTxnResponce,
-    );
-    res.status(200).json(responseDTO);
-  } catch (error) {
-    logger.error(
-      `Error in getTransactionDetails controller: ${error.message}`,
-      { stack: error.stack },
-    );
-    const errorResponseDTO = new ServiceResult(
-      false,
-      getMessage("TXN_FETCH_FAILED", lang),
-      0,
-      error.message,
-      null,
-    );
-    res.status(200).json(errorResponseDTO);
-  }
-};
 
 /**
  * Controller to decode the Revocation List Credential (RLC) from the provided input data.
@@ -1759,9 +1587,17 @@ export const lastLogs = async (req, res) => {
         .send("adminKey/ADMIN_KEY is not configured.");
     }
 
-    if (password !== adminKey) {
-      return res.status(401).send("Password mismatch.");
-    }
+
+    const isValid =
+  password.length === adminKey.length &&
+  crypto.timingSafeEqual(
+    Buffer.from(password),
+    Buffer.from(adminKey)
+  );
+
+  if (!isValid) {
+    return res.status(401).send("Password mismatch.");
+  }
 
     const getLastLines = async (filePath, numLines = 200) => {
       const lines = [];
