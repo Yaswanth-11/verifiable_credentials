@@ -1,23 +1,86 @@
 import { createClient } from "redis";
 
-//import Redis from "ioredis";
-
 import logger from "../utils/logger.js";
+import { getRedisSecretsFromVault } from "./vaultService.js";
 
-import decryptSecret from "./decrypt.js";
+const parseBoolean = (value, fallback = false) => {
+  if (value === undefined || value === null || value === "") {
+    return fallback;
+  }
+
+  return String(value).toLowerCase() === "true";
+};
+
+const getRedisConfigFromEnvironment = () => {
+  const url = process.env.redisURL || process.env.REDIS_URL;
+  const username = process.env.redisUsername || process.env.REDIS_USERNAME || null;
+  const password = process.env.redisPassword || process.env.REDIS_PASSWORD || null;
+
+  if (!url) {
+    throw new Error("redisURL is not defined in environment variables");
+  }
+
+  return {
+    url,
+    username,
+    password,
+  };
+};
+
+const parseClusterNodes = (redisUrl) => {
+  const nodes = redisUrl
+    .split(",")
+    .map((node) => node.trim())
+    .filter(Boolean)
+    .map((node) => {
+      if (node.includes("://")) {
+        const parsed = new URL(node);
+        return {
+          host: parsed.hostname,
+          port: Number.parseInt(parsed.port, 10) || 6379,
+        };
+      }
+
+      const [host, port] = node.split(":");
+      if (!host) {
+        return null;
+      }
+
+      return {
+        host,
+        port: Number.parseInt(port, 10) || 6379,
+      };
+    })
+    .filter(Boolean);
+
+  if (nodes.length === 0) {
+    throw new Error("No valid Redis cluster nodes provided");
+  }
+
+  return nodes;
+};
+
+const getRedisConnectionConfig = async () => {
+  const useVault = parseBoolean(process.env.USE_VAULT, false);
+
+  if (useVault) {
+    logger.info("Using Vault for Redis credentials");
+    return getRedisSecretsFromVault();
+  }
+
+  logger.info("Using environment variables for Redis credentials");
+  return getRedisConfigFromEnvironment();
+};
 
 export async function nodeRedisDemo() {
   try {
-    //const redisurl = decryptSecret(process.env.redisURL);
-    //const redispassword = decryptSecret(process.env.redisPassword);
-
-    const redisurl = process.env.redisURL;
-    const redispassword = process.env.redisPassword;
+    const {
+      url: redisurl,
+      username: redisusername,
+      password: redispassword,
+    } = await getRedisConnectionConfig();
     const isCluster = process.env.REDIS_CLUSTER === "true";
 
-    if (!redisurl) {
-      throw new Error("redisURL is not defined in environment variables");
-    }
     let client;
     let isConnected = false;
 
@@ -27,9 +90,8 @@ export async function nodeRedisDemo() {
      * ================================
      */
     if (!isCluster) {
-      client = createClient({
+      const redisOptions = {
         url: redisurl,
-        password: redispassword,
         socket: {
           reconnectStrategy: (retries) => {
             if (retries > 10) {
@@ -38,10 +100,20 @@ export async function nodeRedisDemo() {
             return Math.min(retries * 100, 3000);
           },
         },
-      });
+      };
+
+      if (redisusername) {
+        redisOptions.username = redisusername;
+      }
+
+      if (redispassword) {
+        redisOptions.password = redispassword;
+      }
+
+      client = createClient(redisOptions);
 
       client.on("error", (err) => {
-        logger.error("Redis Client Error:", err);
+        logger.error(`Redis Client Error: ${err.message}`);
       });
 
       await client.connect();
@@ -54,22 +126,28 @@ export async function nodeRedisDemo() {
      */ else {
       const Redis = (await import("ioredis")).default;
 
-      const nodes = redisurl.split(",").map((node) => {
-        const [host, port] = node.split(":");
-        return { host, port: parseInt(port, 10) };
-      });
+      const nodes = parseClusterNodes(redisurl);
+
+      const redisClusterOptions = {
+        connectTimeout: 10000,
+        enableReadyCheck: true,
+      };
+
+      if (redisusername) {
+        redisClusterOptions.username = redisusername;
+      }
+
+      if (redispassword) {
+        redisClusterOptions.password = redispassword;
+      }
 
       client = new Redis.Cluster(nodes, {
-        redisOptions: {
-          password: redispassword,
-          connectTimeout: 10000,
-          enableReadyCheck: true,
-        },
+        redisOptions: redisClusterOptions,
         scaleReads: "slave",
       });
 
       client.on("error", (err) => {
-        logger.error("Redis Cluster Error:", err);
+        logger.error(`Redis Cluster Error: ${err.message}`);
       });
 
       // Wait until cluster is ready
@@ -93,7 +171,7 @@ export async function nodeRedisDemo() {
         }
         logger.info("Redis connection closed");
       } catch (err) {
-        logger.error("Error during Redis shutdown:", err);
+        logger.error(`Error during Redis shutdown: ${err.message}`);
       }
     };
 
@@ -135,7 +213,7 @@ export async function nodeRedisDemo() {
 
     return clientObj;
   } catch (error) {
-    logger.info(`Error: ${JSON.stringify(error, null, 2)}`);
+    logger.error(`Redis initialization failed: ${error.message}`);
     throw new Error(`Failed to connect to Redis: ${error.message}`);
   }
 }
