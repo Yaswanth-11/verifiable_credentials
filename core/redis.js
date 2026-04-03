@@ -60,6 +60,31 @@ const parseClusterNodes = (redisUrl) => {
   return nodes;
 };
 
+const normalizeStandaloneRedisUrl = (redisUrl) => {
+  if (!redisUrl) {
+    throw new Error("Redis URL is required");
+  }
+
+  const trimmedUrl = redisUrl.trim();
+
+  if (trimmedUrl.includes("://")) {
+    return trimmedUrl;
+  }
+
+  return `redis://${trimmedUrl}`;
+};
+
+const isClusterRedisUrl = (redisUrl) => {
+  if (!redisUrl) {
+    return false;
+  }
+
+  return redisUrl
+    .split(",")
+    .map((node) => node.trim())
+    .filter(Boolean).length > 1;
+};
+
 const getRedisConnectionConfig = async () => {
   const useVault = parseBoolean(process.env.USE_VAULT, false);
 
@@ -79,7 +104,14 @@ export async function nodeRedisDemo() {
       username: redisusername,
       password: redispassword,
     } = await getRedisConnectionConfig();
-    const isCluster = process.env.REDIS_CLUSTER === "true";
+
+    const isCluster = isClusterRedisUrl(redisurl);
+
+    if (isCluster) {
+      logger.info(`Redis cluster nodes: ${redisurl}`);
+    } else {
+      logger.info(`Redis URL: ${normalizeStandaloneRedisUrl(redisurl)}`);
+    }
 
     let client;
     let isConnected = false;
@@ -91,7 +123,7 @@ export async function nodeRedisDemo() {
      */
     if (!isCluster) {
       const redisOptions = {
-        url: redisurl,
+        url: normalizeStandaloneRedisUrl(redisurl),
         socket: {
           reconnectStrategy: (retries) => {
             if (retries > 10) {
@@ -101,10 +133,6 @@ export async function nodeRedisDemo() {
           },
         },
       };
-
-      if (redisusername) {
-        redisOptions.username = redisusername;
-      }
 
       if (redispassword) {
         redisOptions.password = redispassword;
@@ -127,6 +155,10 @@ export async function nodeRedisDemo() {
       const Redis = (await import("ioredis")).default;
 
       const nodes = parseClusterNodes(redisurl);
+
+      // Cluster URL format:
+      // redis://host1:6379,redis://host2:6379,redis://host3:6379
+      // or host1:6379,host2:6379,host3:6379
 
       const redisClusterOptions = {
         connectTimeout: 10000,
