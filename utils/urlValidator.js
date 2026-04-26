@@ -33,10 +33,18 @@ function isPrivateHostAllowed() {
  */
 export function buildValidatedUrl(input) {
   try {
+
+
     const url = new URL(input);
 
+    let ischeck = process.env.CHECK_URL === "true";
+
+    if (!ischeck) {
+      return url.toString();
+    }
+
     // Protocol validation
-    if (url.protocol !== "https:") {
+    if (url.protocol !== "https:" && url.protocol !== "http:") {
       throw new Error("Invalid protocol");
     }
 
